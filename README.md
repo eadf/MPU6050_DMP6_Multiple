@@ -12,5 +12,5 @@ In the unaltered example you need to connect your MPU6050 interrupt pin to Ardui
 You will also need to connect Arduino output pins to each MPU6050 AD0 pin:
 ```
 #define AD0_PIN_0 4  // Connect this pin to the AD0 pin on MPU #0
-#define AD0_PIN_1 5  // Connect this pin to the AD0 pin on MPU #
+#define AD0_PIN_1 5  // Connect this pin to the AD0 pin on MPU #1
 ```
