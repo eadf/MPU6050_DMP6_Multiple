@@ -42,9 +42,6 @@
 #include "Wire.h"
 #endif
 
-const bool useSecondMpu = true;
-MPU6050_Array mpus(useSecondMpu ? 2 : 1);
-
 
 /* =========================================================================
   NOTE: In addition to connection 3.3v, GND, SDA, and SCL, this sketch
@@ -97,6 +94,16 @@ MPU6050_Array mpus(useSecondMpu ? 2 : 1);
 // uncomment "OUTPUT_TEAPOT" if you want output that matches the
 // format used for the InvenSense teapot demo
 //#define OUTPUT_TEAPOT
+
+
+#ifdef OUTPUT_TEAPOT
+// Teapot demo can only output from one MPU6050
+const bool useSecondMpu = false;
+MPU6050_Array mpus(1);
+#else
+const bool useSecondMpu = true;
+MPU6050_Array mpus(useSecondMpu ? 2 : 1);
+#endif
 
 #define INTERRUPT_PIN_0 2  // use pin 2 on Arduino Uno & most boards
 #define INTERRUPT_PIN_1 3  // use pin 3 on Arduino Uno & most boards
@@ -248,7 +255,7 @@ void handleMPUevent(uint8_t mpu) {
 #ifdef OUTPUT_READABLE_QUATERNION
     // display quaternion values in easy matrix form: w x y z
     currentMPU->_mpu.dmpGetQuaternion(&q, fifoBuffer);
-    OUTPUT_SERIAL.print("quat:"); Serial.print(mpu); Serial.print("\t");
+    OUTPUT_SERIAL.print("quat:"); OUTPUT_SERIAL.print(mpu); OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(q.w);
     OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(q.x);
@@ -262,7 +269,7 @@ void handleMPUevent(uint8_t mpu) {
     // display Euler angles in degrees
     currentMPU->_mpu.dmpGetQuaternion(&q, fifoBuffer);
     currentMPU->_mpu.dmpGetEuler(euler, &q);
-    OUTPUT_SERIAL.print("euler:"); Serial.print(mpu); Serial.print("\t");
+    OUTPUT_SERIAL.print("euler:"); OUTPUT_SERIAL.print(mpu); OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(euler[0] * 180 / M_PI);
     OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(euler[1] * 180 / M_PI);
@@ -278,7 +285,7 @@ void handleMPUevent(uint8_t mpu) {
     #if defined(OUTPUT_READABLE_YAWPITCHROLL)
         OUTPUT_SERIAL.print("y");
     #endif
-    OUTPUT_SERIAL.print("pr:"); Serial.print(mpu); Serial.print("\t");
+    OUTPUT_SERIAL.print("pr:"); OUTPUT_SERIAL.print(mpu); OUTPUT_SERIAL.print("\t");
     #if defined(OUTPUT_READABLE_YAWPITCHROLL)
         OUTPUT_SERIAL.print(ypr[0] * 180 / M_PI);
         OUTPUT_SERIAL.print("\t");
@@ -294,7 +301,7 @@ void handleMPUevent(uint8_t mpu) {
     currentMPU->_mpu.dmpGetAccel(&aa, fifoBuffer);
     currentMPU->_mpu.dmpGetGravity(&gravity, &q);
     currentMPU->_mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-    OUTPUT_SERIAL.print("areal:"); Serial.print(mpu); Serial.print("\t");
+    OUTPUT_SERIAL.print("areal:"); OUTPUT_SERIAL.print(mpu); OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(aaReal.x);
     OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(aaReal.y);
@@ -310,7 +317,7 @@ void handleMPUevent(uint8_t mpu) {
     currentMPU->_mpu.dmpGetGravity(&gravity, &q);
     currentMPU->_mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
     currentMPU->_mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-    OUTPUT_SERIAL.print("aworld:"); Serial.print(mpu); Serial.print("\t");
+    OUTPUT_SERIAL.print("aworld:"); OUTPUT_SERIAL.print(mpu); OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(aaWorld.x);
     OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.print(aaWorld.y);
