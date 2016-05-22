@@ -5,14 +5,14 @@ This example connects to two MPU6050. But it is possible to extend the example t
 
 In the unaltered example you need to connect your MPU6050 interrupt pin to Arduino like this:
 ```
-#define INTERRUPT_PIN_0 2  // use pin 2 on Arduino Uno & most boards
-#define INTERRUPT_PIN_1 3  // use pin 3 on Arduino Uno & most boards
+#define INTERRUPT_PIN_0 2  // use pin 2 on Arduino Uno & most boards to INT pin on IMU #0
+#define INTERRUPT_PIN_1 3  // use pin 3 on Arduino Uno & most boards to INT pin on IMU #1
 ```
 
 You will also need to connect Arduino output pins to each MPU6050 AD0 pin:
 ```
-#define AD0_PIN_0 4  // Connect this pin to the AD0 pin on MPU #0
-#define AD0_PIN_1 5  // Connect this pin to the AD0 pin on MPU #1
+#define AD0_PIN_0 4  // Connect this pin to the AD0 pin on IMU #0
+#define AD0_PIN_1 5  // Connect this pin to the AD0 pin on IMU #1
 ```
 
 To make this compile you will probably need the ```develop``` branch of i2cdevlib.
