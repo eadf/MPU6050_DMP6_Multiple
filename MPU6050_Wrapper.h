@@ -33,7 +33,7 @@
 #ifndef MPU6050_WRAPPER_H
 #define MPU6050_WRAPPER_H
 
-#define MPU6050_DMP_FIFO_RATE_DIVISOR 99  // bring down FIFO rate to 2Hz (200/(99+1))
+#define MPU6050_DMP_FIFO_RATE_DIVISOR 9  // bring down FIFO rate to 20Hz (200/(4+1))
 #include "MPU6050_6Axis_MotionApps20.h"
 
 class MPU6050_Wrapper {
@@ -109,7 +109,8 @@ class MPU6050_Array {
       for (int i = 0; i < _fillIndex; i++)
         _array[i]->enable(i == device);
       _currentIndex = device;
-      //delay(1);
+      // give the IMU some time to realize that the AD0 pin is altered
+      delay(4);
       return getCurrent();
     }
 

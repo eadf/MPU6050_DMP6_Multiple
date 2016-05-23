@@ -117,7 +117,7 @@ MPU6050_Array mpus(useSecondMpu ? 2 : 1);
 //#define OUTPUT_SERIAL Serial2
 //#define OUTPUT_SERIAL softSerial
 
-bool blinkState = false;
+
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 // orientation/motion vars
@@ -164,6 +164,7 @@ void setup() {
   // (115200 chosen because it is required for Teapot Demo output, but it's
   // really up to you depending on your project)
   Serial.begin(115200);
+
   while (!Serial)
     ; // wait for Leonardo enumeration, others continue immediately
 
@@ -340,8 +341,6 @@ void handleMPUevent(uint8_t mpu) {
     teapotPacket[11]++;// packetCount, loops at 0xFF on purpose
 #endif
 
-    // blink LED to indicate activity
-    digitalWrite(LED_PIN, blinkState = !blinkState);
   }
 }
 
@@ -350,8 +349,11 @@ void handleMPUevent(uint8_t mpu) {
 // ================================================================
 
 void loop() {
-  uint32_t time1, time2= millis();
+  bool blinkState = false;
+  uint32_t time1, time2;
+  time1 = time2 = millis();
   uint8_t mpu = 0;
+  
   // wait for MPU interrupt or extra packet(s) available
   while (true) {
     if (mpuInterrupt0) {
@@ -360,7 +362,7 @@ void loop() {
       if (currentMPU->_fifoCount < currentMPU->_packetSize) {
         currentMPU->getFIFOCount();
       } else {
-        Serial.print("Speed0:");Serial.print(1000.0/(millis()-time1));time1=millis();Serial.print("Hz ");
+        //Serial.print("Speed0:");Serial.print(1000.0/(millis()-time1));time1=millis();Serial.print("Hz ");
         handleMPUevent(mpu);
         mpuInterrupt0 = false;
       }
@@ -371,7 +373,7 @@ void loop() {
       if (currentMPU->_fifoCount < currentMPU->_packetSize) {
         currentMPU->getFIFOCount();
       } else {
-        Serial.print("Speed1:");Serial.print(1000.0/(millis()-time2));time2=millis();Serial.print("Hz ");
+        //Serial.print("Speed1:");Serial.print(1000.0/(millis()-time2));time2=millis();Serial.print("Hz ");
         handleMPUevent(mpu);
         mpuInterrupt1 = false;
       }
@@ -386,5 +388,8 @@ void loop() {
     // .
     // .
     // .
+    
+    // blink LED to indicate activity
+    digitalWrite(LED_PIN, blinkState = !blinkState);
   }
 }
