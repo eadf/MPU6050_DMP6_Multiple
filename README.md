@@ -15,4 +15,8 @@ You will also need to connect Arduino output pins to each MPU6050 AD0 pin:
 #define AD0_PIN_1 5  // Connect this pin to the AD0 pin on IMU #1
 ```
 
-To make this compile you will probably need the ```develop``` branch of i2cdevlib.
+To set the FIFO rate with the `MPU6050_DMP_FIFO_RATE_DIVISOR` macro you need to checkout the develop branch of i2cdevlib:
+```
+cd i2cdevlib
+git checkout develop
+```
