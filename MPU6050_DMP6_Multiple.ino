@@ -8,7 +8,7 @@
 
 /* ============================================
   I2Cdev device library code is placed under the MIT license
-  Copyright (c) 2012 Jeff Rowberg
+  Copyright (c) 2012, 2016 Jeff Rowberg
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@
 // for both classes must be in the include path of your project
 #include "I2Cdev.h"
 #include "MPU6050_Wrapper.h"
-
+#include "TogglePin.h"
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
@@ -132,6 +132,8 @@ float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravit
 // packet structure for InvenSense teapot demo
 uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r', '\n' };
 
+TogglePin activityLed(LED_PIN, 100);
+
 // ================================================================
 // ===               INTERRUPT DETECTION ROUTINE                ===
 // ================================================================
@@ -199,9 +201,10 @@ void setup() {
   while (Serial.available() && Serial.read())
     ; // empty buffer
   while (!Serial.available())
-    ; // wait for data
+    activityLed.update(); // flash led while waiting for data
   while (Serial.available() && Serial.read())
     ; // empty buffer again
+  activityLed.setPeriod(500); // slow down led to 2Hz
 
   // load and configure the DMP
   Serial.println(F("Initializing DMP..."));
@@ -249,7 +252,14 @@ void handleMPUevent(uint8_t mpu) {
     // wait for correct available data length, should be a VERY short wait
     while (currentMPU->_fifoCount < currentMPU->_packetSize)
       currentMPU->getFIFOCount();
-
+      
+    // read and dump a packet if the queue contains more than one
+    while (currentMPU->_fifoCount >= 2*currentMPU->_packetSize) {
+      // read and dump one sample
+      Serial.print("DUMP"); // this trace will be removed soon
+      currentMPU->getFIFOBytes(fifoBuffer);
+    }
+    
     // read a packet from FIFO
     currentMPU->getFIFOBytes(fifoBuffer);
 
@@ -349,9 +359,9 @@ void handleMPUevent(uint8_t mpu) {
 // ================================================================
 
 void loop() {
-  bool blinkState = false;
-  uint32_t time1, time2;
-  time1 = time2 = millis();
+  //uint32_t time1 = millis();
+  //uint32_t time2 = millis();
+  
   uint8_t mpu = 0;
   
   // wait for MPU interrupt or extra packet(s) available
@@ -389,7 +399,6 @@ void loop() {
     // .
     // .
     
-    // blink LED to indicate activity
-    digitalWrite(LED_PIN, blinkState = !blinkState);
+    activityLed.update();
   }
 }

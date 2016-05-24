@@ -7,7 +7,7 @@
 
 /* ============================================
   I2Cdev device library code is placed under the MIT license
-  Copyright (c) 2012 Jeff Rowberg
+  Copyright (c) 2012, 2016 Jeff Rowberg
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,7 @@
 #ifndef MPU6050_WRAPPER_H
 #define MPU6050_WRAPPER_H
 
-#define MPU6050_DMP_FIFO_RATE_DIVISOR 9  // bring down FIFO rate to 20Hz (200/(4+1))
+#define MPU6050_DMP_FIFO_RATE_DIVISOR 9  // Set FIFO rate to 20Hz (200/(9+1))
 #include "MPU6050_6Axis_MotionApps20.h"
 
 class MPU6050_Wrapper {
@@ -89,7 +89,6 @@ public:
     uint8_t _devStatus = 0;    // return status after each device operation (0 = success, !0 = error)
     uint8_t _packetSize = 0;   // expected DMP packet size (default is 42 bytes)
     uint16_t _fifoCount = 0;   // count of all bytes currently in FIFO
-    uint8_t _fifoBuffer[64];   // FIFO storage buffer
 };
 
 class MPU6050_Array {
@@ -141,7 +140,7 @@ class MPU6050_Array {
       }
     }
 
-    bool programDmp(uint8_t mpu ) {
+    bool programDmp(uint8_t mpu) {
       MPU6050_Wrapper* currentMPU = select(mpu);
       if (currentMPU->_devStatus == 0) {
         // turn on the DMP, now that it's ready
