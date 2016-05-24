@@ -33,16 +33,16 @@
 #ifndef MPU6050_WRAPPER_H
 #define MPU6050_WRAPPER_H
 
-#define MPU6050_DMP_FIFO_RATE_DIVISOR 9  // Set FIFO rate to 20Hz (200/(9+1))
+#define MPU6050_DMP_FIFO_RATE_DIVISOR 3  // Set FIFO rate to 50Hz (200/(3+1))
+#define MPU6050_DMP_FIFO_PERIOD ((uint32_t)(1000.0*((MPU6050_DMP_FIFO_RATE_DIVISOR+1.0))/200.0)-2) // hopefully this will be converted to a uint32_t constant by the compiler
+
 #include "MPU6050_6Axis_MotionApps20.h"
 
 class MPU6050_Wrapper {
-  typedef void (*interrupt_t)();
-  
+ 
   friend class MPU6050_Array;
   public:
-    MPU6050_Wrapper(uint8_t interruptPin, uint8_t ad0Pin, interrupt_t interrupt) : _mpu(MPU6050_ADDRESS_AD0_HIGH), _interruptPin(interruptPin), _ad0Pin(ad0Pin), _interrupt(interrupt)  {
-      pinMode(_interruptPin, INPUT_PULLUP);
+    MPU6050_Wrapper(uint8_t ad0Pin) : _mpu(MPU6050_ADDRESS_AD0_HIGH), _ad0Pin(ad0Pin)  {
       pinMode(_ad0Pin, OUTPUT);
       digitalWrite(_ad0Pin, LOW);
     }
@@ -74,6 +74,16 @@ class MPU6050_Wrapper {
       _fifoCount -= _packetSize;
     }
 
+    bool isDue() {
+      if ((millis() - _lastUpdate) > MPU6050_DMP_FIFO_PERIOD) {
+        if (getFIFOCount() >= _packetSize) return true;
+        else {
+          //Serial.print("F");
+        }
+      }
+      return false;
+    }
+    
  private:
     void enable(bool status) {
       //Serial.print(F(" Setting AD0 pin ")); Serial.print(_ad0Pin); Serial.print(F(" to ")); Serial.println( status ? F("on") : F("off"));
@@ -82,13 +92,12 @@ class MPU6050_Wrapper {
     
 public:
     MPU6050 _mpu;
-    uint8_t _interruptPin;
-    interrupt_t _interrupt;
     uint8_t _ad0Pin;
     uint8_t _mpuIntStatus = 0; // holds actual interrupt status byte from MPU
     uint8_t _devStatus = 0;    // return status after each device operation (0 = success, !0 = error)
     uint8_t _packetSize = 0;   // expected DMP packet size (default is 42 bytes)
     uint16_t _fifoCount = 0;   // count of all bytes currently in FIFO
+    uint32_t _lastUpdate = 0;
 };
 
 class MPU6050_Array {
@@ -97,9 +106,9 @@ class MPU6050_Array {
       _array = (MPU6050_Wrapper**) malloc(sizeof(MPU6050_Wrapper*) * _size);
     }
 
-    void add(uint8_t interruptPin, uint8_t ad0Pin, void (interrupt)()) {
+    void add( uint8_t ad0Pin) {
       if (_fillIndex >= _size) halt(F("MPU6050_Array::add() : overflow"));
-      _array[_fillIndex++] = new MPU6050_Wrapper(interruptPin, ad0Pin, interrupt);
+      _array[_fillIndex++] = new MPU6050_Wrapper(ad0Pin);
     }
 
     MPU6050_Wrapper* select(uint8_t device) {
@@ -109,7 +118,7 @@ class MPU6050_Array {
         _array[i]->enable(i == device);
       _currentIndex = device;
       // give the IMU some time to realize that the AD0 pin is altered
-      delay(4);
+      delay(2);
       return getCurrent();
     }
 
@@ -146,19 +155,17 @@ class MPU6050_Array {
         // turn on the DMP, now that it's ready
         Serial.println(F("Enabling DMP..."));
         currentMPU->_mpu.setDMPEnabled(true);
-
-        // enable Arduino interrupt detection
-        Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
-        Serial.print(digitalPinToInterrupt(currentMPU->_interruptPin));
-        Serial.println(F(")..."));
-        attachInterrupt(digitalPinToInterrupt(currentMPU->_interruptPin), currentMPU->_interrupt, RISING);
         currentMPU->getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        Serial.println(F("DMP ready! Waiting for first interrupt..."));
+        Serial.println(F("DMP ready!"));
 
         // get expected DMP packet size for later comparison
         currentMPU->dmpGetFIFOPacketSize();
+        
+        Serial.print(F("The DMP sample period is ")); Serial.print(MPU6050_DMP_FIFO_PERIOD); Serial.println(F(" ms"));
+        currentMPU->_lastUpdate = millis();
+        
         if (currentMPU->_devStatus) {
           // ERROR!
           // 1 = initial memory load failed

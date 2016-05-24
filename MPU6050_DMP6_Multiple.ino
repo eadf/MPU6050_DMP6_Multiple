@@ -105,9 +105,6 @@ const bool useSecondMpu = true;
 MPU6050_Array mpus(useSecondMpu ? 2 : 1);
 #endif
 
-#define INTERRUPT_PIN_0 2  // use pin 2 on Arduino Uno & most boards
-#define INTERRUPT_PIN_1 3  // use pin 3 on Arduino Uno & most boards
-
 #define AD0_PIN_0 4  // Connect this pin to the AD0 pin on MPU #0
 #define AD0_PIN_1 5  // Connect this pin to the AD0 pin on MPU #1
 
@@ -133,21 +130,6 @@ float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravit
 uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r', '\n' };
 
 TogglePin activityLed(LED_PIN, 100);
-
-// ================================================================
-// ===               INTERRUPT DETECTION ROUTINE                ===
-// ================================================================
-
-volatile bool mpuInterrupt0 = false; // indicates whether MPU interrupt0 pin has gone high
-volatile bool mpuInterrupt1 = false; // indicates whether MPU interrupt1 pin has gone high
-
-void dmpDataReady0() {
-  mpuInterrupt0 = true;
-}
-
-void dmpDataReady1() {
-  mpuInterrupt1 = true;
-}
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -178,12 +160,10 @@ void setup() {
 
   // initialize device
   Serial.println(F("Initializing I2C devices..."));
-  mpus.add(INTERRUPT_PIN_0, AD0_PIN_0, dmpDataReady0);
-  if (useSecondMpu) mpus.add(INTERRUPT_PIN_1, AD0_PIN_1, dmpDataReady1);
+  mpus.add(AD0_PIN_0);
+  if (useSecondMpu) mpus.add(AD0_PIN_1);
 
   mpus.initialize();
-  pinMode(INTERRUPT_PIN_0, INPUT_PULLUP);
-  if (useSecondMpu) pinMode(INTERRUPT_PIN_1, INPUT_PULLUP);
 
   // configure LED for output
   pinMode(LED_PIN, OUTPUT);
@@ -235,9 +215,6 @@ void handleMPUevent(uint8_t mpu) {
   // reset interrupt flag and get INT_STATUS byte
   currentMPU->getIntStatus();
 
-  // get current FIFO count
-  currentMPU->getFIFOCount();
-
   // check for overflow (this should never happen unless our code is too inefficient)
   if ((currentMPU->_mpuIntStatus & _BV(MPU6050_INTERRUPT_FIFO_OFLOW_BIT))
       || currentMPU->_fifoCount >= 1024) {
@@ -249,17 +226,13 @@ void handleMPUevent(uint8_t mpu) {
   // otherwise, check for DMP data ready interrupt (this should happen frequently)
   if (currentMPU->_mpuIntStatus & _BV(MPU6050_INTERRUPT_DMP_INT_BIT)) {
 
-    // wait for correct available data length, should be a VERY short wait
-    while (currentMPU->_fifoCount < currentMPU->_packetSize)
-      currentMPU->getFIFOCount();
-      
     // read and dump a packet if the queue contains more than one
-    while (currentMPU->_fifoCount >= 2*currentMPU->_packetSize) {
+    while (currentMPU->_fifoCount >= 2 * currentMPU->_packetSize) {
       // read and dump one sample
       Serial.print("DUMP"); // this trace will be removed soon
       currentMPU->getFIFOBytes(fifoBuffer);
     }
-    
+
     // read a packet from FIFO
     currentMPU->getFIFOBytes(fifoBuffer);
 
@@ -293,14 +266,14 @@ void handleMPUevent(uint8_t mpu) {
     currentMPU->_mpu.dmpGetQuaternion(&q, fifoBuffer);
     currentMPU->_mpu.dmpGetGravity(&gravity, &q);
     currentMPU->_mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-    #if defined(OUTPUT_READABLE_YAWPITCHROLL)
-        OUTPUT_SERIAL.print("y");
-    #endif
+#if defined(OUTPUT_READABLE_YAWPITCHROLL)
+    OUTPUT_SERIAL.print("y");
+#endif
     OUTPUT_SERIAL.print("pr:"); OUTPUT_SERIAL.print(mpu); OUTPUT_SERIAL.print("\t");
-    #if defined(OUTPUT_READABLE_YAWPITCHROLL)
-        OUTPUT_SERIAL.print(ypr[0] * 180 / M_PI);
-        OUTPUT_SERIAL.print("\t");
-    #endif
+#if defined(OUTPUT_READABLE_YAWPITCHROLL)
+    OUTPUT_SERIAL.print(ypr[0] * 180 / M_PI);
+    OUTPUT_SERIAL.print("\t");
+#endif
     OUTPUT_SERIAL.print(ypr[1] * 180 / M_PI);
     OUTPUT_SERIAL.print("\t");
     OUTPUT_SERIAL.println(ypr[2] * 180 / M_PI);
@@ -359,46 +332,36 @@ void handleMPUevent(uint8_t mpu) {
 // ================================================================
 
 void loop() {
-  //uint32_t time1 = millis();
-  //uint32_t time2 = millis();
-  
-  uint8_t mpu = 0;
-  
-  // wait for MPU interrupt or extra packet(s) available
-  while (true) {
-    if (mpuInterrupt0) {
-      mpu = 0;
-      MPU6050_Wrapper* currentMPU = mpus.select(mpu);
-      if (currentMPU->_fifoCount < currentMPU->_packetSize) {
-        currentMPU->getFIFOCount();
-      } else {
-        //Serial.print("Speed0:");Serial.print(1000.0/(millis()-time1));time1=millis();Serial.print("Hz ");
+
+  static uint8_t mpu = 0;
+  static MPU6050_Wrapper* currentMPU = NULL;
+  if (useSecondMpu) {
+    for (int i=0;i<2;i++) {
+      mpu=(mpu+1)%2; // failed attempt at round robin
+      currentMPU = mpus.select(mpu);
+      if (currentMPU->isDue()) {
         handleMPUevent(mpu);
-        mpuInterrupt0 = false;
       }
     }
-    if (useSecondMpu && mpuInterrupt1) {
-      mpu = 1;
-      MPU6050_Wrapper* currentMPU = mpus.select(mpu);
-      if (currentMPU->_fifoCount < currentMPU->_packetSize) {
-        currentMPU->getFIFOCount();
-      } else {
-        //Serial.print("Speed1:");Serial.print(1000.0/(millis()-time2));time2=millis();Serial.print("Hz ");
-        handleMPUevent(mpu);
-        mpuInterrupt1 = false;
-      }
+  } else {
+    mpu=0;
+    currentMPU = mpus.select(mpu);
+    if (currentMPU->isDue()) {
+      handleMPUevent(mpu);
     }
-    // other program behavior stuff here
-    // .
-    // .
-    // .
-    // if you are really paranoid you can frequently test in between other
-    // stuff to see if mpuInterrupt is true, and if so, "break;" from the
-    // while() loop to immediately process the MPU data
-    // .
-    // .
-    // .
-    
-    activityLed.update();
   }
+  
+  // other program behavior stuff here
+  // .
+  // .
+  // .
+  // if you are really paranoid you can frequently test in between other
+  // stuff to see if mpuInterrupt is true, and if so, "break;" from the
+  // while() loop to immediately process the MPU data
+  // .
+  // .
+  // .
+
+  activityLed.update();
 }
+
