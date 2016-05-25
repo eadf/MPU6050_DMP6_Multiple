@@ -33,7 +33,7 @@
 #ifndef MPU6050_WRAPPER_H
 #define MPU6050_WRAPPER_H
 
-#define MPU6050_DMP_FIFO_RATE_DIVISOR 3  // Set FIFO rate to 50Hz (200/(3+1))
+#define MPU6050_DMP_FIFO_RATE_DIVISOR 4  // Set FIFO rate to 40Hz (200/(4+1))
 #define MPU6050_DMP_FIFO_PERIOD ((uint32_t)(1000.0*((MPU6050_DMP_FIFO_RATE_DIVISOR+1.0))/200.0)-2) // hopefully this will be converted to a uint32_t constant by the compiler
 
 #include "MPU6050_6Axis_MotionApps20.h"
