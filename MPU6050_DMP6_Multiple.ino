@@ -35,6 +35,7 @@
 #include "I2Cdev.h"
 #include "MPU6050_Wrapper.h"
 #include "TogglePin.h"
+#include "DeathTimer.h"
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
@@ -130,6 +131,7 @@ float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravit
 uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r', '\n' };
 
 TogglePin activityLed(LED_PIN, 100);
+DeathTimer deathTimer(5000L);
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -363,5 +365,6 @@ void loop() {
   // .
 
   activityLed.update();
+  deathTimer.update();
 }
 
